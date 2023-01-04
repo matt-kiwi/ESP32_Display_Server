@@ -8,6 +8,8 @@
 #include <TimeLib.h>
 #include <cstring>
 #include <string>
+#include <ArduinoJson.h>
+
 
 //Libraries for OLED Display
 #include <Wire.h>
@@ -32,13 +34,22 @@
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 
+// Forward declerations
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len);
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
+
 const char* wifi_ssid = "ESP32-Access-Point";
 const char* wifi_password = "123456789";
 IPAddress ip_address;
 
 DNSServer dnsServer;
 AsyncWebServer server(80);
+AsyncWebSocket ws("/ws");
 RH_RF95 rf95(LLG_CS, LLG_DI0);
+
+StaticJsonDocument<1024> json_rx;
+StaticJsonDocument<1024> json_tx;
+
 
 // Set LED GPIO
 const int ledPin = LED_BUILTIN;
@@ -115,6 +126,10 @@ void server_routes(){
     request->redirect("/");
   });
 
+  // Websockets init.
+  ws.onEvent(onEvent);
+  server.addHandler(&ws);
+
   // Route for root / web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(SPIFFS, "/index.html", String(), false, processor);
@@ -146,6 +161,32 @@ void server_routes(){
   });
 }
 
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
+  AwsFrameInfo *info = (AwsFrameInfo*)arg;
+  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+    data[len] = 0;
+    Serial.printf("WS data:%s\n",data);
+  }
+}
+
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
+ void *arg, uint8_t *data, size_t len) {
+  switch (type) {
+    case WS_EVT_CONNECT:
+      Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+      break;
+    case WS_EVT_DISCONNECT:
+      Serial.printf("WebSocket client #%u disconnected\n", client->id());
+      break;
+    case WS_EVT_DATA:
+      handleWebSocketMessage(arg, data, len);
+      break;
+    case WS_EVT_PONG:
+    case WS_EVT_ERROR:
+      break;
+  }
+}
+
 void setup(){
   Serial.begin(115200);
   SPI.begin();
@@ -173,15 +214,25 @@ void setup(){
   server.begin();
   Serial.print("Webserver started on IP:");
   Serial.println(ip_address);
+  
+
 }
 
 time_t time1 = 0;
 void loop(){
+  char data[100];
   dnsServer.processNextRequest();
+  ws.cleanupClients();
   delay(50);
   if( now() - time1 > 15 ){
     time1 = now();
     Serial.println("ping...");
+    ws.textAll("ping.. ");
+    json_tx["age"]= 21;
+    json_tx["color"] = "red";
+    size_t len = serializeJson(json_tx, data);
+    ws.textAll(data, len);
+    Serial.printf("JSON:: %s\n",data);
     // uint8_t data[] = "ping";
     // rf95.send(data, sizeof(data));
     // rf95.waitPacketSent();
