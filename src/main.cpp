@@ -37,8 +37,9 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 // Forward declerations
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len);
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
+void sendLoraMessage( const char * data );
 
-const char* wifi_ssid = "ESP32-Access-Point";
+const char* wifi_ssid = "EconodeDisplay";
 const char* wifi_password = "123456789";
 IPAddress ip_address;
 
@@ -47,8 +48,8 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 RH_RF95 rf95(LLG_CS, LLG_DI0);
 
-StaticJsonDocument<1024> json_rx;
-StaticJsonDocument<1024> json_tx;
+StaticJsonDocument<2048> json_rx;
+StaticJsonDocument<2048> json_tx;
 
 
 // Set LED GPIO
@@ -56,23 +57,6 @@ const int ledPin = LED_BUILTIN;
 // Stores LED state
 String ledState;
 
-
-void sendLoraMessage( const char * data );
-
-// Replaces placeholder with LED state value
-String processor(const String& var){
-  Serial.println(var);
-  if(var == "STATE"){
-    if(digitalRead(ledPin)){
-      ledState = "ON";
-    }
-    else{
-      ledState = "OFF";
-    }
-    return ledState;
-  }
-  return String();
-}
 
 void init_oled(){
   //reset OLED display via software
@@ -97,68 +81,31 @@ void init_oled(){
   display.display();
 }
 
-void action_update(AsyncWebServerRequest *request)
-{
-  // Step through POST params
-  int params = request->params();
-  for (int i = 0; i < params; i++)
-  {
-    AsyncWebParameter* p = request->getParam(i);
-    // Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
-    if( strcmp(p->name().c_str(), "d_text\0") == 0 ){
-      Serial.printf(" Found: %s ",p->value().c_str());
-      sendLoraMessage(p->value().c_str());
-    }
-  }
-  request->send(SPIFFS, "/index.html", String(), false, processor);
-}
-
 void sendLoraMessage( const char * data ){
     rf95.send( (uint8_t *) data, strlen(data) );
     rf95.waitPacketSent();
 }
 
-
-
 void server_routes(){
   // https://github.com/me-no-dev/ESPAsyncWebServer#handlers-and-how-do-they-work
   server.onNotFound([](AsyncWebServerRequest *request){
-    request->redirect("/");
+    request->redirect("/index.html");
   });
 
   // Websockets init.
   ws.onEvent(onEvent);
   server.addHandler(&ws);
 
+/*
   // Route for root / web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(SPIFFS, "/index.html", String(), false, processor);
+    request->send(SPIFFS, "/index.html", String(), false);
     Serial.println("Send index.html");
   });
-
-  // Process LCD update
-  server.on("/update", HTTP_POST, action_update);
+*/
 
   // Serve static files
-  server.serveStatic("/static/", SPIFFS,"/static/");
-  
-  // Route to set GPIO to HIGH
-  server.on("/on", HTTP_GET, [](AsyncWebServerRequest *request){
-    uint8_t data[] = "on";
-    digitalWrite(ledPin, HIGH);
-    request->send(SPIFFS, "/index.html", String(), false, processor);
-    rf95.send(data, sizeof(data));
-    rf95.waitPacketSent();
-  });
-  
-  // Route to set GPIO to LOW
-  server.on("/off", HTTP_GET, [](AsyncWebServerRequest *request){
-    uint8_t data[] = "off";
-    digitalWrite(ledPin, LOW);
-    request->send(SPIFFS, "/index.html", String(), false, processor);
-    rf95.send(data, sizeof(data));
-    rf95.waitPacketSent();
-  });
+  server.serveStatic("/", SPIFFS,"/html/");
 }
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
@@ -202,7 +149,7 @@ void setup(){
     Serial.println("An Error has occurred while mounting SPIFFS");
     return;
   }
-  WiFi.softAP("EconodeDisplay");
+  WiFi.softAP(wifi_ssid);
   ip_address = WiFi.softAPIP();
   Serial.println(ip_address);
   dnsServer.start(53, "*", ip_address );
@@ -214,8 +161,6 @@ void setup(){
   server.begin();
   Serial.print("Webserver started on IP:");
   Serial.println(ip_address);
-  
-
 }
 
 time_t time1 = 0;
