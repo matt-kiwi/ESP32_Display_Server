@@ -105,13 +105,28 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
   
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
     data[len] = 0;
-    Serial.printf("WS data:%s\n",data);
-    DeserializationError error = deserializeJson(json_rx,data);
+    Serial.printf("WS RX rawstring:%s\n",data);
+    DeserializationError err = deserializeJson(json_rx,data);
+    if (err) {
+      Serial.printf("ERROR: deserializeJson() failed with: %s\n",err.c_str() );
+      Serial.printf("Can not process websocket request\n");
+      return;
+    }
     const char* messageType = json_rx["messageType"];
-    const char* dTxt = json_rx["payload"]["dTxt"];
-    Serial.printf("WS data->messageType:%s\n",messageType);
-    Serial.printf("WS data->dTxt:%s\n",dTxt);
-    sendLoraMessage(dTxt);
+    Serial.printf("WS RX->messageType:%s\n",messageType);
+
+    // Route websocket message based on messageType
+    // Display message
+    if( strcmp(messageType,"display") == 0 ){
+      const char* dTxt = json_rx["payload"]["dTxt"];
+      const char* dColor = json_rx["payload"]["dColor"];
+      int dBright =  json_rx["payload"]["dBright"];
+      Serial.printf("WS RX display dColor:%s, dBright:%d, dTxt:\"%s\"\n",dColor,dBright,dTxt);
+      sendLoraMessage(dTxt);
+      return;
+    }
+
+
   }
 }
 
