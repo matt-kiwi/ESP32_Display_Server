@@ -21,9 +21,11 @@ function onMessage(event) {
 }
 
 function handleButtonPress(evt){
-    var data = {messageId:4,messageType:'display',payload:{d_text:"hello", d_color:"red",d_bright:"low"} };
+    const dTxt = document.querySelector("#d_text").value;
+    const dBright = document.querySelector("input:checked[name*='bright'").value;
+    const dColor = document.querySelector("input:checked[name*='color'").value;
+    var data = {messageType:'display',payload:{dTxt:dTxt, dBright:dBright,dColor:dColor} };
     var jsonData = JSON.stringify(data);
-    console.log("button press, data");
     console.log( jsonData );
     websocket.send(jsonData);
 }

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Econode Display</title>
+  <title>Econode Displayii</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="data:,">
   <link rel="stylesheet" type="text/css" href="/style.css">
@@ -9,9 +9,26 @@
 </head>
 <body>
     <h1>Econode Display</h1>
-    <p><button class="button">ON</button></p>
-    <p><button class="button button2">OFF</button></p>
-    <b>Display:</b><input type="text" id="d_text" name="d_text" />
-    <button class="button" id="btn_update">Update</button>
+    <b>Display:</b><input type="text" id="d_text" name="d_text" maxlength="12" />
+    <button class="button" id="btn_update">Update</button><br>
+
+    <p>Colour:</p>
+    <input type="radio" id="color_red" name="color" value="RED" checked>
+    <label for="color_red">RED</label>&nbsp;
+    <input type="radio" id="color_green" name="color" value="GREEN">
+    <label for="color_green">GREEN</label>&nbsp;
+    <input type="radio" id="color_blue" name="color" value="BLUE">
+    <label for="color_blue">BLUE</label>&nbsp;
+    <input type="radio" id="color_white" name="color" value="WHITE">
+    <label for="color_white">WHITE</label>&nbsp;
+
+    <p>Brightness:</p>
+    <input type="radio" id="bright1" name="bright" value="1">
+    <label for="bright1">Low</label>&nbsp;
+    <input type="radio" id="bright2" name="bright" value="2" checked>
+    <label for="bright2">Medium</label>&nbsp;
+    <input type="radio" id="bright3" name="bright" value="3">
+    <label for="bright3">High</label>&nbsp;
+
 </body>
 </html>

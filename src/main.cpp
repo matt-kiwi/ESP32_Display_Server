@@ -96,23 +96,22 @@ void server_routes(){
   ws.onEvent(onEvent);
   server.addHandler(&ws);
 
-/*
-  // Route for root / web page
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(SPIFFS, "/index.html", String(), false);
-    Serial.println("Send index.html");
-  });
-*/
-
   // Serve static files
   server.serveStatic("/", SPIFFS,"/html/");
 }
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
   AwsFrameInfo *info = (AwsFrameInfo*)arg;
+  
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
     data[len] = 0;
     Serial.printf("WS data:%s\n",data);
+    DeserializationError error = deserializeJson(json_rx,data);
+    const char* messageType = json_rx["messageType"];
+    const char* dTxt = json_rx["payload"]["dTxt"];
+    Serial.printf("WS data->messageType:%s\n",messageType);
+    Serial.printf("WS data->dTxt:%s\n",dTxt);
+    sendLoraMessage(dTxt);
   }
 }
 
