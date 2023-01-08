@@ -51,11 +51,24 @@ RH_RF95 rf95(LLG_CS, LLG_DI0);
 StaticJsonDocument<2048> json_rx;
 StaticJsonDocument<2048> json_tx;
 
+uint16_t messageId = 0;
+struct displayPacket_t {
+  uint8_t packetType =1;
+  uint16_t messageId;
+  char * dTxt;
+  uint8_t dBright;
+  uint8_t dColor; // 1=Red, 2=Blue, 3=Green, 4=White
+};
+displayPacket_t displayPacket;
 
-// Set LED GPIO
-const int ledPin = LED_BUILTIN;
-// Stores LED state
-String ledState;
+struct displayPacketAck_t {
+  uint8_t packetType =1;
+  uint16_t messageId;
+  char * dTxt;
+  uint8_t dBright; // 1=Low, 2=Medium, 3=Bright
+  uint8_t dColor; // 1=Red, 2=Green, 3=Blue, 4=White
+};
+displayPacketAck_t displayPacketAct;
 
 
 void init_oled(){
@@ -81,9 +94,24 @@ void init_oled(){
   display.display();
 }
 
-void sendLoraMessage( const char * data ){
-    rf95.send( (uint8_t *) data, strlen(data) );
+void sendLoraMessage( uint8_t * data, unsigned int len ){
+    rf95.send( data, len );
     rf95.waitPacketSent();
+}
+
+void sendLoraMessage( const char * data ){
+  rf95.send( (uint8_t *) data, strlen(data) );
+  rf95.waitPacketSent();
+}
+
+uint8_t colorLookup( const char * data ){
+  // 1=Red, 2=Green, 3=Blue, 4=White
+  int8_t color = 1; // Default to red
+  if( strcmp(data,"RED")==0) color = 1;
+  if( strcmp(data,"GREEN")==0) color = 2;
+  if( strcmp(data,"BLUE")==0) color = 3;
+  if( strcmp(data,"WHITE")==0) color = 4;
+  return color;
 }
 
 void server_routes(){
@@ -121,12 +149,16 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
       const char* dTxt = json_rx["payload"]["dTxt"];
       const char* dColor = json_rx["payload"]["dColor"];
       int dBright =  json_rx["payload"]["dBright"];
-      Serial.printf("WS RX display dColor:%s, dBright:%d, dTxt:\"%s\"\n",dColor,dBright,dTxt);
-      sendLoraMessage(dTxt);
+      displayPacket.messageId = messageId++;
+      displayPacket.dBright = dBright;
+      displayPacket.dColor = colorLookup(dColor);
+      displayPacket.dTxt = (char*) dTxt;
+      Serial.printf("WS RX display messageId:%d dColor:%d, dBright:%d, dTxt:\"%s\"\n",
+        displayPacket.messageId,displayPacket.dColor,displayPacket.dBright,displayPacket.dTxt);
+      uint8_t * buf = reinterpret_cast<uint8_t*>(&displayPacket);
+      sendLoraMessage(buf, sizeof(displayPacket) );
       return;
     }
-
-
   }
 }
 
@@ -158,7 +190,6 @@ void setup(){
   }
   rf95.setTxPower(10, false);
   rf95.setFrequency(915.0);
-  pinMode(ledPin,OUTPUT);
   if(!SPIFFS.begin(true)){
     Serial.println("An Error has occurred while mounting SPIFFS");
     return;
