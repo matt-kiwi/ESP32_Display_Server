@@ -51,22 +51,23 @@ RH_RF95 rf95(LLG_CS, LLG_DI0);
 StaticJsonDocument<2048> json_rx;
 StaticJsonDocument<2048> json_tx;
 
-uint16_t messageId = 0;
-struct displayPacket_t {
+uint16_t messageId = 9;
+struct   displayPacket_t {
   uint8_t packetType =1;
+  uint8_t filler = 0;
   uint16_t messageId;
-  char * dTxt;
   uint8_t dBright;
   uint8_t dColor; // 1=Red, 2=Blue, 3=Green, 4=White
+  char dTxt[14];
 };
 displayPacket_t displayPacket;
 
-struct displayPacketAck_t {
+struct  displayPacketAck_t {
   uint8_t packetType =1;
   uint16_t messageId;
-  char * dTxt;
   uint8_t dBright; // 1=Low, 2=Medium, 3=Bright
   uint8_t dColor; // 1=Red, 2=Green, 3=Blue, 4=White
+  char * dTxt;
 };
 displayPacketAck_t displayPacketAct;
 
@@ -152,9 +153,10 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
       displayPacket.messageId = messageId++;
       displayPacket.dBright = dBright;
       displayPacket.dColor = colorLookup(dColor);
-      displayPacket.dTxt = (char*) dTxt;
+      memset(displayPacket.dTxt,0,sizeof(displayPacket.dTxt));
+      strncpy(displayPacket.dTxt,dTxt,sizeof(displayPacket.dTxt)-1);
       Serial.printf("WS RX display messageId:%d dColor:%d, dBright:%d, dTxt:\"%s\"\n",
-        displayPacket.messageId,displayPacket.dColor,displayPacket.dBright,displayPacket.dTxt);
+      displayPacket.messageId,displayPacket.dColor,displayPacket.dBright,displayPacket.dTxt);
       uint8_t * buf = reinterpret_cast<uint8_t*>(&displayPacket);
       sendLoraMessage(buf, sizeof(displayPacket) );
       return;
@@ -188,8 +190,10 @@ void setup(){
   } else {
     Serial.println("LoRa Radio: init OK!");
   }
-  rf95.setTxPower(10, false);
+  rf95.setTxPower(22, false);
   rf95.setFrequency(915.0);
+
+  // rf95.setModemConfig(RH_RF95::Bw31_25Cr48Sf512);
   if(!SPIFFS.begin(true)){
     Serial.println("An Error has occurred while mounting SPIFFS");
     return;
@@ -210,21 +214,11 @@ void setup(){
 
 time_t time1 = 0;
 void loop(){
-  char data[100];
   dnsServer.processNextRequest();
   ws.cleanupClients();
   delay(50);
   if( now() - time1 > 15 ){
     time1 = now();
-    Serial.println("ping...");
-    ws.textAll("ping.. ");
-    json_tx["age"]= 21;
-    json_tx["color"] = "red";
-    size_t len = serializeJson(json_tx, data);
-    ws.textAll(data, len);
-    Serial.printf("JSON:: %s\n",data);
-    // uint8_t data[] = "ping";
-    // rf95.send(data, sizeof(data));
-    // rf95.waitPacketSent();
+    // Do some stuff every 15 seconds
   } 
 }
