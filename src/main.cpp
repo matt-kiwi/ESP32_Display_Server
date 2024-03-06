@@ -88,10 +88,10 @@ void init_oled(){
   
   display.clearDisplay();
   display.setTextColor(WHITE);
-  display.setTextSize(1);
+  display.setTextSize(2);
   display.setCursor(0,0);
-  display.print("IP:" );
-  display.print(ip_address );
+  //display.print(ip_address );
+  display.print("Econode");
   display.display();
 }
 
@@ -159,6 +159,14 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
       displayPacket.messageId,displayPacket.dColor,displayPacket.dBright,displayPacket.dTxt);
       uint8_t * buf = reinterpret_cast<uint8_t*>(&displayPacket);
       sendLoraMessage(buf, sizeof(displayPacket) );
+      //
+      display.begin();
+      display.clearDisplay();
+      display.setTextColor(WHITE);
+      display.setTextSize(2);
+      display.setCursor(0,0);
+      display.print(dTxt);
+      display.display();
       return;
     }
   }

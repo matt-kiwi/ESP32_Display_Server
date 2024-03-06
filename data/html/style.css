@@ -29,4 +29,9 @@ html {
     margin: 2px;
     cursor: pointer;
   }
+
+  .isClicked {
+    background-color: #7F7F7F !important;
+    font-weight: bold !important;
+  }
   
