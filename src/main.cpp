@@ -160,6 +160,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
       uint8_t * buf = reinterpret_cast<uint8_t*>(&displayPacket);
       sendLoraMessage(buf, sizeof(displayPacket) );
       //
+      /*
       display.begin();
       display.clearDisplay();
       display.setTextColor(WHITE);
@@ -167,6 +168,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
       display.setCursor(0,0);
       display.print(dTxt);
       display.display();
+      */
       return;
     }
   }
@@ -212,7 +214,7 @@ void setup(){
   dnsServer.start(53, "*", ip_address );
   server_routes();
 
-  init_oled();
+  // init_oled();
 
   // Start server
   server.begin();
